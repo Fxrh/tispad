@@ -20,11 +20,12 @@ import queue
 
 class TispaServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     
-    def __init__(self, server_address, queue, bind_and_activate=True):
+    def __init__(self, server_address, data_q, bind_and_activate=True):
         socketserver.TCPServer.__init__(self, server_address, TispaHandler, bind_and_activate)
-        self.queue = queue
+        self.queue = data_q
     
     def process_request_thread(self, request, client_address):
+        print("blub")
         handler = TispaHandler( request, client_address, self, self.queue )
         handler.setup()
         handler.handle()
@@ -32,15 +33,19 @@ class TispaServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 class TispaHandler( socketserver.StreamRequestHandler ):
     
-    def __init__(self, request, client_address, server, queue):
+    def __init__(self, request, client_address, server):
+        raise Exception()
+    
+    def __init__(self, request, client_address, server, data_q):
+        self.data = data_q
+        print("bla")
         socketserver.StreamRequestHandler.__init__(self, request, client_address, server )
-        self.queue = queue
     
     def handle(self):
         while( True ):
             data = self.rfile.readline()
             self.wfile.write(data.upper())
-            queue.put(data)
+            self.data.put(data)
         
 if __name__ == '__main__':
     HOST, PORT = "localhost", 9999

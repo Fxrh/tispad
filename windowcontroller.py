@@ -17,6 +17,8 @@
 import subprocess
 import dbus
 import time
+import ncserver
+import queue
 
 
 class WindowController:
@@ -30,7 +32,49 @@ class WindowController:
             except:
                 time.sleep(1)
         print("Connected.")
+        self.allowedList = []
         
-    def showText(self, text, cell):
-        self.wm.setReplace(cell)
-        subprocess.Popen(['clients/simpletext/simpletext',text])
+        
+    def parseCommand(self, command):
+        if command.strip() == '':
+            return
+        command = command.decode().split()
+        print(command)
+        if command[0].lower() == "tofullscreen" and len(command) == 2:
+            try:
+                cell = int(command[1])
+            except ValueError:
+                return
+            print(self.wm.toFullscreen( cell ))
+        elif command[0].lower() == "endfullscreen" and len(command) == 1:
+            self.wm.endFullscreen()
+        elif command[0].lower() == "setcolsrows" and len(command) == 3:
+            try:
+                cols = int(command[1])
+                rows = int(command[2])
+            except ValueError:
+                return
+            self.wm.setColsRows(cols, rows)
+        elif command[0].lower() == "start" and len(command) >= 3:
+            try:
+                cell = int(command[1])
+                self.wm.setReplace(cell)
+                if command[3] in self.allowedList:
+                    subprocess.Popen(command[2:])
+            except:
+                return
+
+
+def main():
+    data_q = queue.Queue()
+    ncs = ncserver.TispaServer( ("localhost", 48738), data_q )
+    ncs.timeout = 1
+    wc = WindowController()
+    while True:
+        ncs.handle_request()
+        if not data_q.empty():
+            wc.parseCommand( data_q.get() )
+
+if __name__ == '__main__':
+    main()
+        
